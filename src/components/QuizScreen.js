@@ -6,15 +6,19 @@ const QuizScreen = ({ route, navigation }) => {
   const [timer, setTimer] = useState(180); // Set a timer for 3 minutes (180 seconds)
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [score, setScore] = useState(0); // To track score
+  const [timeSpent, setTimeSpent] = useState(0); // Track time spent on the quiz
+  const [isNextButtonDisabled, setIsNextButtonDisabled] = useState(false);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
 
   // Get category from route params
-  const category = route.params?.category;
+  const category = route.params?.category || 'general';
+  console.log('Received category:', category);
 
-  // All questions and answers are from chatgpt
+ 
   // All questions and answers are from chatgpt
   const questions = {
     //GENERAL QUESTIONS and ANSWERS
-    general: [
+    General: [
     {
       question: 'Which of the following is the longest river in the world?',
       options: ['A.  Nile ', 'B. Amazon', 'C.  Yangtze', 'D. Mississippi'],
@@ -69,7 +73,7 @@ const QuizScreen = ({ route, navigation }) => {
 
 
     // SCIENCE QUESTIONS and ANSWERS
-    science: [
+    Science: [
       {
         question: 'Which element has the highest electronegativity on the periodic table?',
         options: ['A. Fluorine', 'B. Magnesium', 'C. Lithium', 'D. Bromine'],
@@ -122,7 +126,7 @@ const QuizScreen = ({ route, navigation }) => {
       },
     ],
     // MATH QUESTIONS and ANSWERS
-    math: [
+    Math: [
       {
         question: 'If the area of a circle is 78.5 square units, what is the radius? (Use π = 3.14)',
         options: ['A. 4', 'B. 5', 'C. 10', 'D. 15'],
@@ -176,7 +180,7 @@ const QuizScreen = ({ route, navigation }) => {
       ],
 
     // MUSIC QUESTIONS and ANSWERS
-      music: [
+      Music: [
         {
           question: 'Which famous composer became deaf later in life but continued to compose music?',
           options: ['A. Ludwig van Beethoven', 'B. Wolfgang Amadeus Mozart', 'C. Johann Sebastian Bach', 'D. Franz Schulbert'],
@@ -230,7 +234,7 @@ const QuizScreen = ({ route, navigation }) => {
         ],
 
     //HISTORY QUESTIONS and ANSWERS
-    history: [
+    History: [
       {
         question: 'When did the Second Nagorno-Karabakh war end?',
         options: ['A. November 10, 2020', 'B. October 11, 2021', 'C. December 5, 2022', 'D. December 10, 2020'],
@@ -285,41 +289,55 @@ const QuizScreen = ({ route, navigation }) => {
   };
 
 
-  // Use the category to get the questions for that category
-  const currentCategoryQuestions = questions[category] || [];
+   // Use the category to get the questions for that category
+   const currentCategoryQuestions = questions[category] || [];
 
-  // Timer logic to reset each question
-  useEffect(() => {
-    if (timer === 0) return; 
-
-    const timerInterval = setInterval(() => {
-      setTimer(prevTime => (prevTime > 0 ? prevTime - 1 : 0));
-    }, 1000);
-
-    return () => clearInterval(timerInterval);
-  }, [questionIndex, timer]); // Reset timer when the question changes
-
-  const handleNextQuestion = () => {
+   // Timer logic to reset each question
+   useEffect(() => {
+     // Update the timer every second
+     const timerId = setInterval(() => {
+       if (timer > 0) {
+         setTimer(timer - 1);
+       }
+     }, 1000);
+ 
+     return () => clearInterval(timerId); // Cleanup interval on unmount
+   }, [timer]);
+ 
+   const handleNextQuestion = () => {
     if (selectedAnswer === currentCategoryQuestions[questionIndex]?.answer) {
-      setScore(prevScore => prevScore + 1); 
-    }// Reset selected answer
-    setQuestionIndex(prevIndex => Math.min(prevIndex + 1, currentCategoryQuestions.length - 1));
-    setTimer(60); 
+      setCorrectAnswers(prevCount => prevCount + 1);
+      setScore(prevScore => prevScore + 1);
+      console.log("Correct answer! Score:", score);
+  } else {
+    console.log("Incorrect answer.");
+    }
+
+    // Check if it's the last question
+    if (questionIndex === currentCategoryQuestions.length - 1) {
+        setIsNextButtonDisabled(true);
+    } else {
+        // Increment the question index by 1
+        setQuestionIndex(prevIndex => prevIndex + 1);
+
+        // Reset selected answer and timer for the next question
+        setSelectedAnswer(null);
+        setTimer(60);
+    }
+}; 
+   const handleSubmit = () => {
+    const timeSpent = 180 - timer;
+    navigation.navigate('Score', { score, timeSpent, correctAnswers });
   };
-
-  const handleSubmit = () => {
-    navigation.navigate('Score', { score: score });
-  };
-
-  const currentQuestion = currentCategoryQuestions[questionIndex];
-
-  
+ 
+   const currentQuestion = currentCategoryQuestions[questionIndex];
+ 
   const categoryImages = {
-    science: require('../../assets/science.png'),
-    history: require('../../assets/history.png'),
-    music: require('../../assets/music.png'),
-    general: require('../../assets/general.png'),
-    math: require('../../assets/math.png'),
+  Science: require('../../assets/science.png'),
+  History: require('../../assets/history.png'),
+  Music: require('../../assets/music.png'),
+  General: require('../../assets/general.png'),
+  Math: require('../../assets/math.png'),
   };
 
   // Format timer to MM:SS
@@ -329,128 +347,202 @@ const QuizScreen = ({ route, navigation }) => {
     return `${minutes}:${seconds < 10 ? `0${seconds}` : seconds}`;
   };
 
+  const handleOptionPress = (option) => {
+    setSelectedAnswer(option);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Image source={categoryImages[category]} style={styles.logo} />
-        <Text style={styles.categoryText}>{category.charAt(0).toUpperCase() + category.slice(1)}</Text>
+        <Image source={categoryImages[category]} style={styles.categoryImage} />
+        <Text style={styles.categoryText}>{category}</Text>
       </View>
-      
-      <View style={styles.timerContainer}>
-        <Text style={styles.timer}>{formatTime(timer)}</Text>
+
+      <View style={styles.grayBox}>
+      <View style={styles.header}>
+        <View style={styles.timerContainer}>
+          <Image source={require('../../assets/timer-icon.png')} style={styles.timerIcon} />
+          <Text style={styles.timer}>{formatTime(timer)}</Text>
+        </View>
         <Text style={styles.questionCounter}>Q {questionIndex + 1}/{currentCategoryQuestions.length}</Text>
       </View>
-
-      
-      {currentQuestion ? (
-        <View style={styles.questionBox}>
-          <Text style={styles.questionText}>{currentQuestion.question}</Text>
-
-          <View style={styles.options}>
-            {currentQuestion.options.map((option, index) => (
-              <Button
-                key={index}
-                title={option}
-                onPress={() => setSelectedAnswer(option)} 
-                color="#000" 
-              />
-            ))}
-          </View>
+  
+        <View style={styles.questionContainer}>
+          <Text style={styles.questionText}>{currentQuestion?.question}</Text>
         </View>
-      ) : (
-        <Text>No question available</Text> 
-      )}
-
-      {timer === 0 && <Text style={styles.timerUp}>Time's up!</Text>}
-
-      <Button
-        title="Next"
-        onPress={handleNextQuestion}
-        disabled={questionIndex >= currentCategoryQuestions.length - 1}
-      />
-
-      {/* Submit Button Styled */}
-      <TouchableOpacity 
-        style={styles.submitButton}
-        onPress={handleSubmit}
-        disabled={questionIndex < currentCategoryQuestions.length - 1}
-      >
-        <Text style={styles.submitButtonText}>Submit</Text>
-      </TouchableOpacity>
+  
+        <View style={styles.options}>
+          {currentQuestion?.options?.map((option, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.optionButton, selectedAnswer === option && styles.selectedOption]}
+              onPress={() => handleOptionPress(option)}
+            >
+              <Text style={styles.optionButtonText}>{option}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+  
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.nextButton} onPress={handleNextQuestion}>
+          <Image source={require('../../assets/arrow-right.png')} style={styles.arrowIcon} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitButtonText}>Submit</Text>
+        </TouchableOpacity>
+    </View>
     </View>
   );
-};
-
+}
 const styles = StyleSheet.create({
-  container: { 
+  container: {
     flex: 1,
-    justifyContent: 'flex-start', 
-    alignItems: 'center' 
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 20,
   },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginTop: 20, 
+
+  grayBox: {
+    backgroundColor: '#d9d9d9',
+    padding: 20,
+    borderRadius: 10,
+    width: '90%',
     marginBottom: 20,
   },
-  logo: { 
-    width: 50, 
-    height: 50, 
-    marginRight: 10 
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  categoryText: { 
-    fontSize: 20, 
-    fontWeight: 'bold' 
+
+  logo: {
+    width: 80, // Adjust logo size
+    height: 80,
+    marginRight: 10, // Space between logo and category name
   },
-  timerContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    width: '100%', 
-    marginBottom: 20 
+
+  categoryImage: {
+    width: 30,
+    height: 30,
+    marginRight: 10,
   },
-  timer: { 
-    fontSize: 18 
+  categoryText: {
+    fontSize: 30,
+    fontWeight: 'bold',
   },
-  questionCounter: { 
-    fontSize: 18 
+  grayBox: {
+    backgroundColor: '#f2f2f2',
+    padding: 20,
+    width: '90%',
+    borderRadius: 10,
+    marginBottom: 20, // Space between gray box and next section
+    shadowColor: '#000', // Shadow color
+    shadowOffset: { width: 0, height: 2 }, // Horizontal and vertical offset
+    shadowOpacity: 0.1, // Opacity of the shadow
+    shadowRadius: 5, // Radius of the shadow's blur
+    // Android shadow properties
+    elevation: 5,
   },
-  questionBox: { 
-    backgroundColor: '#daa520', 
-    padding: 20, 
-    borderRadius: 10, 
-    width: '100%' 
+  timeAndCounter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20, // Add spacing below time and counter
   },
-  questionText: { 
-    fontSize: 18, 
-    marginBottom: 20 
+  timer: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  options: { 
-    marginVertical: 20 
+  questionCounter: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  timerUp: { 
-    color: 'red', 
-    fontWeight: 'bold', 
-    fontSize: 16 
+  questionContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 25,
+  },
+  questionText: {
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  options: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  optionsContainer: {
+    backgroundColor: '#f2f2f2', // Light gray background
+    padding: 20,
+    borderRadius: 10,
+    width: '90%',
+    marginBottom: 20,
+  },
+
+  optionButton: {
+    backgroundColor: 'black',
+    borderRadius: 10,
+    padding: 15,
+    width: '100%',
+    marginBottom: 15,
+    alignItems: 'flex-start', // Align text to the left
+  },
+  optionButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+
+  arrowIcon: {
+    width: 20,
+    height: 20,
+    backgroundColor: 'white',
+    marginLeft: 40,
   },
   submitButton: {
-    backgroundColor: '#daa520', 
-    paddingVertical: 15, 
-    width: '80%', 
-    borderRadius: 8, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    elevation: 5, 
-    marginTop: 20, 
-    position: 'absolute', 
-    bottom: 40, 
+    backgroundColor: '#f0c23a',
+    padding: 15,
+    borderRadius: 10,
+    width: '80%',
+    marginBottom: 20, 
+    alignSelf: 'center', 
   },
   submitButtonText: {
-    color: 'white', 
-    fontSize: 16, 
-    fontWeight: 'bold' 
-  }
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+
+  nextButton: {
+    backgroundColor: 'transparent', // Make the button transparent
+    padding: 15,
+    borderRadius: 10,
+    alignSelf: 'flex-end', // Align the button to the right
+    marginBottom: 20,
+  },
+  buttonContainer: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '80%',
+    marginBottom: 20,
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  timerIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 5,
+  },
+  selectedOption: {
+    backgroundColor: '#666', // Dark gray color
+  },
+
 });
 
 export default QuizScreen;
-
-

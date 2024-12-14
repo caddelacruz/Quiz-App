@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 
 const ScoreScreen = ({ route, navigation }) => {
-  const { score, timeSpent, correctAnswers } = route.params; 
+  const { Score, timeSpent, correctAnswers } = route.params; 
 
   
   const formatTime = (time) => {
@@ -19,7 +19,7 @@ const ScoreScreen = ({ route, navigation }) => {
       <View style={styles.infoBox}>
         <Image source={require('../../assets/trophy.png')} style={styles.logo} />
         <Text style={styles.congratulations}>Congratulations!</Text>
-        <Text style={styles.scoreDetails}>{score}</Text>
+        <Text style={styles.scoreDetails}>{Score}</Text>
         <View style={styles.row}>
           <View style={styles.timerBox}>
             <Text style={styles.timerIcon}>⏱️</Text>
